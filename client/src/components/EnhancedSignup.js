@@ -97,7 +97,7 @@ const EnhancedSignup = () => {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/google/signup', {
+      const response = await fetch('/api/auth/google/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +145,7 @@ const EnhancedSignup = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/verify-signup-code', {
+      const response = await fetch('/api/auth/verify-signup-code', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

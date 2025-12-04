@@ -69,9 +69,9 @@ function Dashboard() {
 
         console.log('🔑 Using token for authentication');
 
-        const response = await fetch(`http://localhost:5000/get-modules?user_id=${user.id}`, {
+        const response = await fetch(`/api/get-modules?user_id=${user.id}`, {
           method: 'GET',
-          headers: { 
+          headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
@@ -273,7 +273,7 @@ function Dashboard() {
       const token = session?.access_token;
       if (!token) throw new Error('Missing token');
 
-      const res = await fetch(`http://localhost:5000/delete-module/${moduleToDelete}`, {
+      const res = await fetch(`/api/delete-module/${moduleToDelete}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -343,7 +343,7 @@ function Dashboard() {
           setMessage('💾 Saving module...');
           setUploadProgress(80);
     
-          const res = await fetch('http://localhost:5000/upload-module', {
+          const res = await fetch('/api/upload-module', {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,
