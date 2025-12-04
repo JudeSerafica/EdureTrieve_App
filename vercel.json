@@ -20,7 +20,8 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/client/$1"
     }
-  ]
+  ],
+  "outputDirectory": "client/build"
 }
