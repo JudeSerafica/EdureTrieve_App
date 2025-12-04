@@ -1498,10 +1498,4 @@ app.get('/', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 EduRetrieve backend server running on port ${PORT}`);
-  console.log(`📡 Server URL: http://localhost:${PORT}`);
-  console.log(`🔗 Frontend proxy target: http://localhost:5000`);
-});
-
 export default app;
