@@ -24,10 +24,19 @@ const groq = new Groq({
 const googleClient = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  'http://localhost:3000/auth/callback'
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/auth/callback` : 'http://localhost:3000/auth/callback'
 );
 
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+const allowedOrigins = [
+  'http://localhost:3000', // For development
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+  process.env.FRONTEND_URL // Add this env var in Vercel if needed
+].filter(Boolean);
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -254,7 +263,7 @@ app.post('/api/auth/google/callback', async (req, res) => {
     try {
       const tokenResponse = await googleClient.getToken({
         code,
-        redirect_uri: 'http://localhost:3000/auth/callback'
+        redirect_uri: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/auth/callback` : 'http://localhost:3000/auth/callback'
       });
       tokens = tokenResponse.tokens;
     } catch (tokenError) {
@@ -1469,38 +1478,4 @@ app.get('/', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-  console.log(`Google OAuth Client ID: ${process.env.GOOGLE_CLIENT_ID ? 'configured' : 'missing'}`);
-  console.log(`Gmail configured: ${process.env.GMAIL_USER || 'judskie198@gmail.com'}`);
-  console.log(`Supabase: ${process.env.NEXT_PUBLIC_SUPABASE_URL ? 'configured' : 'missing'}`);
-  console.log('');
-  console.log('FIXES APPLIED:');
-  console.log('   ✅ All fullName references changed to fullname');
-  console.log('   ✅ All pfpUrl references changed to pfpurl');
-  console.log('   ✅ Database column names now match code references');
-  console.log('   ✅ Profile creation and updates should work correctly');
-  console.log('   ✅ SELECT queries use correct column names');
-  console.log('   ✅ INSERT and UPDATE operations use correct column names');
-  console.log('');
-  console.log('Available endpoints:');
-  console.log('   Authentication:');
-  console.log('     POST /api/auth/google/signup');
-  console.log('     POST /api/auth/google/callback');
-  console.log('     POST /api/auth/verify-signup-code');
-  console.log('');
-  console.log('   Modules:');
-  console.log('     POST /upload-module');
-  console.log('     GET  /get-modules');
-  console.log('     GET  /get-my-modules');
-  console.log('     GET  /get-saved-modules');
-  console.log('     POST /api/save-module (new)');
-  console.log('     POST /api/unsave-module (new)');
-  console.log('     POST /save-module (legacy)');
-  console.log('     POST /unsave-module (legacy)');
-  console.log('');
-  console.log('   Analytics & Profile:');
-  console.log('     GET  /api/analytics/:userId');
-  console.log('     GET  /get-user-profile');
-  console.log('     POST /sync-user-profile');
-});
+export default app;
