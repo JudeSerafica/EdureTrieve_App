@@ -109,16 +109,22 @@ router.post('/process-file', chatFileUpload.single('file'), async (req, res) => 
 
     try {
       if (isImage) {
+        console.log('Processing image file for OCR...');
         extractedText = await extractFromImage(file.buffer);
-        console.log('Image OCR extraction successful, text length:', extractedText.length);
+        console.log('Image OCR extraction completed, text length:', extractedText.length);
       } else {
+        console.log('Processing document file...');
         extractedText = await extractTextFromFile(file.buffer, file.mimetype);
-        console.log('Document text extraction successful, text length:', extractedText.length);
+        console.log('Document text extraction completed, text length:', extractedText.length);
       }
     } catch (extractionError) {
       console.error('Text extraction failed:', extractionError);
-      // Continue with empty text if extraction fails
-      extractedText = `[${isImage ? 'Image' : 'File'} uploaded - text extraction failed]`;
+      // Provide more specific error messages based on file type
+      if (isImage) {
+        extractedText = '[Image uploaded - OCR processing failed in serverless environment. Please describe the image content manually for better AI responses.]';
+      } else {
+        extractedText = `[${file.mimetype.split('/')[1].toUpperCase()} file uploaded - text extraction failed. The AI can still help analyze this file if you describe its contents.]`;
+      }
     }
 
     // No cleanup needed since we're using memory storage

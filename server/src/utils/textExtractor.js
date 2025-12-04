@@ -42,7 +42,18 @@ async function extractTextFromFile(input, mimeType) {
  */
 async function extractFromPDF(input) {
   try {
+    console.log('[textExtractor] Starting PDF extraction...');
     const dataBuffer = Buffer.isBuffer(input) ? input : fs.readFileSync(input);
+
+    // Check buffer size - large PDFs might cause memory issues
+    const bufferSizeMB = dataBuffer.length / (1024 * 1024);
+    console.log(`[textExtractor] PDF buffer size: ${bufferSizeMB.toFixed(2)} MB`);
+
+    if (bufferSizeMB > 50) {
+      console.warn('[textExtractor] Large PDF detected, extraction may fail in serverless environment');
+      return '[Large PDF uploaded - text extraction may be limited in serverless environment. Please try a smaller file or describe the content manually.]';
+    }
+
     const mod = await import('pdf-parse');
 
     let text = '';
@@ -66,10 +77,22 @@ async function extractFromPDF(input) {
       throw new Error('Unsupported pdf-parse export shape');
     }
 
-    return text;
+    console.log(`[textExtractor] PDF extraction completed, extracted ${text.length} characters`);
+    return text || '[PDF processed - no text content found]';
+
   } catch (error) {
     console.error('[textExtractor] PDF extraction error:', error);
-    throw new Error(`PDF extraction failed: ${error.message}`);
+
+    // Provide helpful fallback messages
+    if (error.message.includes('timeout') || error.message.includes('time')) {
+      return '[PDF uploaded - extraction timed out in serverless environment]';
+    } else if (error.message.includes('memory') || error.message.includes('Memory') || error.message.includes('heap')) {
+      return '[PDF uploaded - extraction failed due to memory limits]';
+    } else if (error.message.includes('encrypted') || error.message.includes('password')) {
+      return '[PDF uploaded - file appears to be password-protected]';
+    } else {
+      return `[PDF uploaded - extraction failed: ${error.message}]`;
+    }
   }
 }
 
@@ -149,19 +172,54 @@ async function extractFromPPTX(input) {
 async function extractFromImage(input) {
   let worker;
   try {
-    worker = await createWorker('eng');
+    console.log('[textExtractor] Starting OCR extraction...');
+
+    // Check if we're in a serverless environment and provide fallback
+    const isServerless = process.env.VERCEL || process.env.LAMBDA_TASK_ROOT || !process.env.USER;
+    if (isServerless) {
+      console.warn('[textExtractor] Serverless environment detected, OCR may fail. Providing fallback.');
+      return '[Image uploaded - OCR processing not available in serverless environment. Please describe the image content manually.]';
+    }
+
+    worker = await createWorker('eng', 1, {
+      logger: m => console.log('[Tesseract]', m)
+    });
+
     let result;
     if (Buffer.isBuffer(input)) {
+      console.log('[textExtractor] Processing buffer input...');
       result = await worker.recognize(input);
     } else {
+      console.log('[textExtractor] Processing file path input...');
       result = await worker.recognize(input);
     }
-    return result.data.text.trim();
+
+    const extractedText = result.data.text.trim();
+    console.log(`[textExtractor] OCR completed, extracted ${extractedText.length} characters`);
+
+    return extractedText || '[Image processed - no text detected]';
+
   } catch (error) {
-    throw new Error(`Image OCR extraction failed: ${error.message}`);
+    console.error('[textExtractor] OCR extraction error:', error);
+
+    // Provide helpful fallback messages based on error type
+    if (error.message.includes('WebAssembly') || error.message.includes('wasm')) {
+      return '[Image uploaded - OCR failed due to WebAssembly limitations in serverless environment]';
+    } else if (error.message.includes('timeout') || error.message.includes('time')) {
+      return '[Image uploaded - OCR timed out in serverless environment]';
+    } else if (error.message.includes('memory') || error.message.includes('Memory')) {
+      return '[Image uploaded - OCR failed due to memory limits]';
+    } else {
+      return `[Image uploaded - OCR failed: ${error.message}]`;
+    }
   } finally {
     if (worker) {
-      await worker.terminate();
+      try {
+        await worker.terminate();
+        console.log('[textExtractor] OCR worker terminated');
+      } catch (e) {
+        console.warn('[textExtractor] Error terminating worker:', e);
+      }
     }
   }
 }
