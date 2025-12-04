@@ -1,6 +1,3 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 import express from 'express';
 import cors from 'cors';
 import nodemailer from 'nodemailer';
@@ -15,17 +12,51 @@ import chatRoutes from './routes/chatRoutes.js';
 
 const app = express();
 const upload = multer();
-const PORT = process.env.PORT || 5000;
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+// Initialize services with error handling
+let groq, googleClient, supabase, transporter;
 
-const googleClient = new OAuth2Client(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/auth/callback` : 'http://localhost:3000/auth/callback'
-);
+try {
+  groq = new Groq({
+    apiKey: process.env.GROQ_API_KEY,
+  });
+} catch (error) {
+  console.warn('Failed to initialize Groq client:', error.message);
+}
+
+try {
+  googleClient = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/auth/callback` : 'http://localhost:3000/auth/callback'
+  );
+} catch (error) {
+  console.warn('Failed to initialize Google OAuth client:', error.message);
+}
+
+try {
+  supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dcepfndjsmktrfcelvgs.supabase.co',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjZXBmbmRqc21rdHJmY2VsdmdzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTAwMDkxNiwiZXhwIjoyMDY2NTc2OTE2fQ.uSduSDirvbRdz5_2ySrVTp_sYPGcg6ddP6_XfMDZZKQ'
+  );
+} catch (error) {
+  console.warn('Failed to initialize Supabase client:', error.message);
+}
+
+try {
+  transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER || 'judskie198@gmail.com',
+      pass: process.env.GMAIL_APP_PASSWORD || 'xncqbcovtcstfbon',
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+} catch (error) {
+  console.warn('Failed to initialize email transporter:', error.message);
+}
 
 const allowedOrigins = [
   'http://localhost:3000', // For development
@@ -44,22 +75,6 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Mount chat routes
 app.use('/api/chat', chatRoutes);
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dcepfndjsmktrfcelvgs.supabase.co',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjZXBmbmRqc21rdHJmY2VsdmdzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTAwMDkxNiwiZXhwIjoyMDY2NTc2OTE2fQ.uSduSDirvbRdz5_2ySrVTp_sYPGcg6ddP6_XfMDZZKQ'
-);
-
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER || 'judskie198@gmail.com',
-    pass: process.env.GMAIL_APP_PASSWORD || 'xncqbcovtcstfbon',
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
-});
-
 const verificationCodes = new Map();
 
 const generateVerificationCode = () => {
@@ -67,6 +82,10 @@ const generateVerificationCode = () => {
 };
 
 const generateContent = async (prompt, retries = 3) => {
+  if (!groq) {
+    throw new Error("AI service not initialized. Please check GROQ_API_KEY.");
+  }
+
   try {
     const chatCompletion = await groq.chat.completions.create({
       messages: [
@@ -85,6 +104,10 @@ const generateContent = async (prompt, retries = 3) => {
 };
 
 const authenticateToken = async (req, res, next) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database service not initialized' });
+  }
+
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -203,6 +226,10 @@ app.post('/api/unsave-module', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/auth/google/signup', async (req, res) => {
+  if (!googleClient) {
+    return res.status(500).json({ error: 'Google OAuth service not initialized' });
+  }
+
   const { email } = req.body;
 
   if (!email) {
@@ -231,6 +258,10 @@ app.post('/api/auth/google/signup', async (req, res) => {
 });
 
 app.post('/api/auth/google/callback', async (req, res) => {
+  if (!googleClient) {
+    return res.status(500).json({ error: 'Google OAuth service not initialized' });
+  }
+
   const { code, state } = req.body;
 
   if (!code || !state) {
@@ -346,14 +377,19 @@ app.post('/api/auth/google/callback', async (req, res) => {
       </div>
     `;
 
-    try {
-      await transporter.sendMail({
-        from: `"EduRetrieve" <${process.env.GMAIL_USER || 'judskie198@gmail.com'}>`,
-        to: originalEmail,
-        subject: 'Complete Your EduRetrieve Registration',
-        html: emailHtml,
-      });
-    } catch (emailError) {
+    if (transporter) {
+      try {
+        await transporter.sendMail({
+          from: `"EduRetrieve" <${process.env.GMAIL_USER || 'judskie198@gmail.com'}>`,
+          to: originalEmail,
+          subject: 'Complete Your EduRetrieve Registration',
+          html: emailHtml,
+        });
+      } catch (emailError) {
+        console.warn('Email sending failed:', emailError.message);
+      }
+    } else {
+      console.warn('Email transporter not initialized, skipping email send');
     }
 
     setTimeout(() => {
@@ -380,6 +416,10 @@ app.post('/api/auth/google/callback', async (req, res) => {
 });
 
 app.post('/api/auth/verify-signup-code', async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database service not initialized' });
+  }
+
   const { email, code, password } = req.body;
 
   if (!email || !code || !password) {
@@ -522,6 +562,10 @@ app.post('/api/auth/verify-signup-code', async (req, res) => {
 });
 
 app.post('/api/auth/check-user-status', async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database service not initialized' });
+  }
+
   const { email } = req.body;
 
   if (!email) {
@@ -571,6 +615,10 @@ app.post('/api/auth/check-user-status', async (req, res) => {
 });
 
 app.post('/api/auth/sync-profile-on-login', async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database service not initialized' });
+  }
+
   const { userId, email, userData } = req.body;
 
   if (!userId || !email) {
@@ -756,6 +804,10 @@ app.get('/api/protected-data', authenticateToken, (req, res) => {
 });
 
 app.post('/api/upload-module', authenticateToken, upload.single('file'), async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database service not initialized' });
+  }
+
   try {
     const { title, description } = req.body;
     let { file_url, file_name } = req.body;
@@ -1252,6 +1304,10 @@ app.post('/unsave-module', authenticateToken, async (req, res) => {
 });
 
 app.get('/api/analytics/:userId', authenticateToken, async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database service not initialized' });
+  }
+
   try {
     const { userId } = req.params;
 
@@ -1278,6 +1334,10 @@ app.get('/api/analytics/:userId', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/debug/user-info', async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database service not initialized' });
+  }
+
   const { email } = req.body;
 
   if (!email) {
@@ -1342,6 +1402,10 @@ app.post('/api/debug/user-info', async (req, res) => {
 });
 
 app.post('/api/fix-null-profiles', async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database service not initialized' });
+  }
+
   try {
     const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
     if (usersError) throw usersError;
@@ -1409,6 +1473,10 @@ app.post('/api/fix-null-profiles', async (req, res) => {
 });
 
 app.get('/debug/table-structure', authenticateToken, async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: 'Database service not initialized' });
+  }
+
   try {
     const { data: sampleModule } = await supabase
       .from('modules')
