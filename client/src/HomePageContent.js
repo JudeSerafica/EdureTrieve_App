@@ -140,7 +140,7 @@ function HomePageContent() {
 
       <div style={containerStyle}>
 
-        <h1 style={headingStyle}>Learn Smarter with EduRerieve AI</h1>
+        <h1 style={headingStyle}>Learn Smarter with EduRetrieve AI</h1>
         <p style={paragraphStyle}>
           Upload your study materials and chat with AI to get instant answers, summaries, and personalized learning
           insights.

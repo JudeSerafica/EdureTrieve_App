@@ -813,6 +813,7 @@ function Dashboard() {
       {showUploadModal && (
         <div className="modals-overlay">
           <div className="modals-box">
+            
             <h3>Upload Module</h3>
             <form onSubmit={handleUpload}>
               <label>Module Title:</label>
