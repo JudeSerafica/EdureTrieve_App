@@ -92,7 +92,7 @@ const useAuthStatus = ({
 
         if (error || !token) throw new Error('No valid Supabase token');
 
-        const res = await fetch('http://localhost:5000/api/protected-data', {
+        const res = await fetch('/api/protected-data', {
           headers: {
             Authorization: `Bearer ${token}`,
           },

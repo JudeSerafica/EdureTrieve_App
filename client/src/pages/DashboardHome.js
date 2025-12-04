@@ -653,11 +653,12 @@ function Dashboard() {
           src={module.file_url}
           width="300"
           height="150"
-          left="10px"
-          alignItems="center"
-          justifyContent="center"
-          alignContent="center"
-          style={{ border: "1px solid #ccc", borderRadius: "4px" }}
+          style={{
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            display: "block",
+            margin: "0 auto"
+          }}
           title="PDF preview"
         />
       )}

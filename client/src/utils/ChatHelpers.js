@@ -150,7 +150,7 @@ export const generateContentApi = async (user, prompt, conversationId) => {
     throw new Error('Missing or invalid Supabase token');
   }
 
-  const res = await fetch('http://localhost:5000/api/generate-content', {
+  const res = await fetch('/api/generate-content', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -198,7 +198,7 @@ export const processChatFileApi = async (user, file, conversationId, customPromp
     formData.append('prompt', customPrompt);
   }
 
-  const res = await fetch('http://localhost:5000/api/chat/process-file', {
+  const res = await fetch('/api/chat/process-file', {
     method: 'POST',
     body: formData,
   });

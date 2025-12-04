@@ -21,7 +21,7 @@ function AuthCallback() {
 
         setMessage('Verifying with Google...');
 
-        const response = await fetch('http://localhost:5000/api/auth/google/callback', {
+        const response = await fetch('/api/auth/google/callback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code, state }),

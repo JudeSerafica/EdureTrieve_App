@@ -754,7 +754,7 @@ app.get('/api/protected-data', authenticateToken, (req, res) => {
   });
 });
 
-app.post('/upload-module', authenticateToken, upload.single('file'), async (req, res) => {
+app.post('/api/upload-module', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     const { title, description } = req.body;
     let { file_url, file_name } = req.body;
@@ -876,7 +876,7 @@ app.post('/upload-module', authenticateToken, upload.single('file'), async (req,
   }
 });
 
-app.get('/get-modules', authenticateToken, async (req, res) => {
+app.get('/api/get-modules', authenticateToken, async (req, res) => {
   try {
     const { show_all } = req.query;
 
@@ -939,7 +939,7 @@ app.get('/get-modules', authenticateToken, async (req, res) => {
 });
 
 // ✅ Get user profile
-app.get('/get-user-profile', authenticateToken, async (req, res) => {
+app.get('/api/get-user-profile', authenticateToken, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -973,26 +973,41 @@ app.get('/get-user-profile', authenticateToken, async (req, res) => {
 
 
 // ✅ Sync user profile
-app.post('/sync-user-profile', authenticateToken, async (req, res) => {
+app.post('/api/sync-user-profile', authenticateToken, async (req, res) => {
+  console.log('🔄 /api/sync-user-profile called');
+  console.log('👤 User ID:', req.user.id);
+  console.log('📥 Request body:', req.body);
+
   try {
     const { username, fullName, pfpUrl } = req.body; // camelCase from frontend
 
+    console.log('📝 Parsed data:', { username, fullName, pfpUrl });
+
+    const upsertData = {
+      id: req.user.id,
+      email: req.user.email,
+      username: username || '',
+      fullname: fullName || '', // save to DB as snake_case
+      pfpurl: pfpUrl || '',     // save to DB as snake_case
+      updated_at: new Date().toISOString()
+    };
+
+    console.log('💾 Upserting to database:', upsertData);
+
     const { data, error } = await supabase
       .from('profiles')
-      .upsert({
-        id: req.user.id,
-        email: req.user.email,
-        username: username || '',
-        fullname: fullName || '', // save to DB as snake_case
-        pfpurl: pfpUrl || '',     // save to DB as snake_case
-        updated_at: new Date().toISOString()
-      })
+      .upsert(upsertData)
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Database error:', error);
+      throw error;
+    }
+
+    console.log('✅ Database update successful:', data);
 
     // return camelCase to frontend
-    res.status(200).json({
+    const responseData = {
       message: 'Profile updated successfully',
       profile: {
         id: data[0].id,
@@ -1001,14 +1016,18 @@ app.post('/sync-user-profile', authenticateToken, async (req, res) => {
         fullName: data[0].fullname,
         pfpUrl: data[0].pfpurl
       }
-    });
+    };
+
+    console.log('📤 Sending response:', responseData);
+    res.status(200).json(responseData);
   } catch (error) {
+    console.error('❌ Error in /api/sync-user-profile:', error);
     res.status(500).json({ error: 'Failed to sync profile' });
   }
 });
 
 
-app.delete('/delete-module/:moduleId', authenticateToken, async (req, res) => {
+app.delete('/api/delete-module/:moduleId', authenticateToken, async (req, res) => {
   try {
     const { moduleId } = req.params;
 
@@ -1045,7 +1064,7 @@ app.delete('/delete-module/:moduleId', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/get-my-modules', authenticateToken, async (req, res) => {
+app.get('/api/get-my-modules', authenticateToken, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('modules')
@@ -1067,7 +1086,7 @@ app.get('/get-my-modules', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/get-saved-modules', authenticateToken, async (req, res) => {
+app.get('/api/get-saved-modules', authenticateToken, async (req, res) => {
   try {
     const { data: savedData, error: savedError } = await supabase
       .from('save_modules')
@@ -1454,18 +1473,18 @@ app.get('/', (req, res) => {
       'POST /api/auth/sync-profile-on-login - Sync profile on login',
       'POST /api/generate-content - Generate AI content',
       'GET /api/protected-data - Test protected route',
-      'POST /upload-module - Upload module',
-      'GET /get-modules - Get user\'s own modules (use ?show_all=true for all)',
+      'POST /api/upload-module - Upload module',
+      'GET /api/get-modules - Get user\'s own modules (use ?show_all=true for all)',
       'GET /browse-all-modules - Browse all public modules',
-      'GET /get-my-modules - Get user\'s own modules (dedicated endpoint)',
-      'GET /get-saved-modules - Get saved modules',
+      'GET /api/get-my-modules - Get user\'s own modules (dedicated endpoint)',
+      'GET /api/get-saved-modules - Get saved modules',
       'POST /api/save-module - Save a module',
       'POST /api/unsave-module - Unsave a module',
       'POST /save-module - Save a module (legacy endpoint)',
       'POST /unsave-module - Unsave a module (legacy endpoint)',
-      'GET /get-user-profile - Get user profile',
-      'POST /sync-user-profile - Update user profile',
-      'DELETE /delete-module/:id - Delete module',
+      'GET /api/get-user-profile - Get user profile',
+      'POST /api/sync-user-profile - Update user profile',
+      'DELETE /api/delete-module/:id - Delete module',
       'GET /api/analytics/:userId - Get user analytics',
       'GET /debug/table-structure - Debug table structure'
     ],
@@ -1476,6 +1495,12 @@ app.get('/', (req, res) => {
       'Profile creation and updates should work correctly'
     ]
   });
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 EduRetrieve backend server running on port ${PORT}`);
+  console.log(`📡 Server URL: http://localhost:${PORT}`);
+  console.log(`🔗 Frontend proxy target: http://localhost:5000`);
 });
 
 export default app;

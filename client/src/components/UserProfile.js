@@ -23,7 +23,7 @@ function UserProfile({ user }) {
         if (error) throw error;
         const accessToken = session?.access_token;
 
-        const res = await fetch('http://localhost:5000/get-user-profile', {
+        const res = await fetch('/api/get-user-profile', {
           headers: {
             Authorization: `Bearer ${accessToken}`, // ✅ fixed
           },
@@ -83,6 +83,9 @@ function UserProfile({ user }) {
     if (!user) return;
     setMessage('');
 
+    console.log('🔄 Starting profile update...');
+    console.log('📤 Data to send:', { username, fullName, pfpUrl });
+
     try {
       const {
         data: { session },
@@ -92,31 +95,80 @@ function UserProfile({ user }) {
       if (error) throw error;
       const accessToken = session?.access_token;
 
-      const response = await fetch('http://localhost:5000/sync-user-profile', {
+      console.log('🔑 Access token exists:', !!accessToken);
+      console.log('🔑 Token length:', accessToken ? accessToken.length : 0);
+
+      const requestBody = {
+        username,
+        fullName,
+        pfpUrl,
+      };
+
+      console.log('📡 Sending request to: /api/sync-user-profile');
+      console.log('📦 Request body:', JSON.stringify(requestBody, null, 2));
+
+      const response = await fetch('/api/sync-user-profile', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`, // ✅ fixed
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          username,
-          fullName,
-          pfpUrl,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+
       const result = await response.json();
+      console.log('📥 Response body:', result);
+
       if (!response.ok) throw new Error(result.error || 'Failed to update profile.');
 
       // Update Supabase user metadata to sync with sidebar display
+      console.log('🔄 Updating Supabase user metadata...');
       await supabase.auth.updateUser({
         data: { full_name: fullName }
       });
 
+      console.log('✅ Profile update successful');
       setMessage(result.message || '✅ Profile updated!');
+
+      // Re-fetch profile data to update the UI with the latest changes
+      console.log('🔄 Re-fetching profile data...');
+      const fetchUpdatedProfile = async () => {
+        try {
+          const {
+            data: { session },
+            error: sessionError
+          } = await supabase.auth.getSession();
+
+          if (sessionError) throw sessionError;
+          const accessToken = session?.access_token;
+
+          const res = await fetch('/api/get-user-profile', {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+
+          const result = await res.json();
+          if (res.ok && result.profile) {
+            const { username: newUsername, fullName: newFullName, pfpUrl: newPfpUrl } = result.profile;
+            console.log('🔄 Updated profile data:', { newUsername, newFullName, newPfpUrl });
+            setUsername(newUsername || '');
+            setFullName(newFullName || '');
+            setPfpUrl(newPfpUrl || '');
+          }
+        } catch (err) {
+          console.error('❌ Error re-fetching profile:', err.message);
+        }
+      };
+
+      await fetchUpdatedProfile();
       setIsEditing(false);
     } catch (err) {
       console.error('❌ Error updating profile:', err.message);
+      console.error('❌ Error details:', err);
       setMessage('❌ Failed to update profile.');
     }
   };
