@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaUserCircle, FaCamera } from 'react-icons/fa';
 import { supabase } from '../supabaseClient';
+import API_BASE_URL from '../config';
 
 function UserProfile({ user }) {
   const [username, setUsername] = useState('');
@@ -23,7 +24,7 @@ function UserProfile({ user }) {
         if (error) throw error;
         const accessToken = session?.access_token;
 
-        const res = await fetch('/api/get-user-profile', {
+        const res = await fetch(`${API_BASE_URL}/api/get-user-profile`, {
           headers: {
             Authorization: `Bearer ${accessToken}`, // ✅ fixed
           },
@@ -107,7 +108,7 @@ function UserProfile({ user }) {
       console.log('📡 Sending request to: /api/sync-user-profile');
       console.log('📦 Request body:', JSON.stringify(requestBody, null, 2));
 
-      const response = await fetch('/api/sync-user-profile', {
+      const response = await fetch(`${API_BASE_URL}/api/sync-user-profile`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`, // ✅ fixed
@@ -145,7 +146,7 @@ function UserProfile({ user }) {
           if (sessionError) throw sessionError;
           const accessToken = session?.access_token;
 
-          const res = await fetch('/api/get-user-profile', {
+          const res = await fetch(`${API_BASE_URL}/api/get-user-profile`, {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },

@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import API_BASE_URL from '../config';
 
 // ------------------------
 // 📅 Format Timestamp
@@ -150,7 +151,7 @@ export const generateContentApi = async (user, prompt, conversationId) => {
     throw new Error('Missing or invalid Supabase token');
   }
 
-  const res = await fetch('/api/generate-content', {
+  const res = await fetch(`${API_BASE_URL}/api/generate-content`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -198,7 +199,7 @@ export const processChatFileApi = async (user, file, conversationId, customPromp
     formData.append('prompt', customPrompt);
   }
 
-  const res = await fetch('/api/chat/process-file', {
+  const res = await fetch(`${API_BASE_URL}/api/chat/process-file`, {
     method: 'POST',
     body: formData,
   });

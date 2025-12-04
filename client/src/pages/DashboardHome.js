@@ -7,6 +7,7 @@ import FileViewer from "../components/FileViewer";
 import { useDropzone } from 'react-dropzone';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+import API_BASE_URL from '../config';
 
 function Dashboard() {
   const { user, authLoading } = useAuthStatus();
@@ -69,7 +70,7 @@ function Dashboard() {
 
         console.log('🔑 Using token for authentication');
 
-        const response = await fetch(`/api/get-modules?user_id=${user.id}`, {
+        const response = await fetch(`${API_BASE_URL}/api/get-modules?user_id=${user.id}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -273,7 +274,7 @@ function Dashboard() {
       const token = session?.access_token;
       if (!token) throw new Error('Missing token');
 
-      const res = await fetch(`/api/delete-module/${moduleToDelete}`, {
+      const res = await fetch(`${API_BASE_URL}/api/delete-module/${moduleToDelete}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -343,7 +344,7 @@ function Dashboard() {
           setMessage('💾 Saving module...');
           setUploadProgress(80);
     
-          const res = await fetch('/api/upload-module', {
+          const res = await fetch(`${API_BASE_URL}/api/upload-module`, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import API_BASE_URL from '../config';
 
 const useAuthStatus = ({
   autoRedirect = true,
@@ -92,7 +93,7 @@ const useAuthStatus = ({
 
         if (error || !token) throw new Error('No valid Supabase token');
 
-        const res = await fetch('/api/protected-data', {
+        const res = await fetch(`${API_BASE_URL}/api/protected-data`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

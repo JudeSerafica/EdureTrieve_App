@@ -30,7 +30,8 @@ const googleClient = new OAuth2Client(
 const allowedOrigins = [
   'http://localhost:3000', // For development
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
-  process.env.FRONTEND_URL // Add this env var in Vercel if needed
+  process.env.FRONTEND_URL, // Add this env var in Vercel if needed
+  process.env.CLIENT_URL // For separate client deployment
 ].filter(Boolean);
 
 app.use(cors({

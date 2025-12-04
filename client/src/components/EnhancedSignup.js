@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import API_BASE_URL from '../config';
 
 const EnhancedSignup = () => {
   const [email, setEmail] = useState('');
@@ -41,7 +42,7 @@ const EnhancedSignup = () => {
           setMessage('Google verification successful! Please enter the verification code sent to your email.');
           
           try {
-            const response = await fetch('/api/auth/check-verification-status', {
+            const response = await fetch(`${API_BASE_URL}/api/auth/check-verification-status`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email: storedEmail }),
@@ -97,7 +98,7 @@ const EnhancedSignup = () => {
     setMessage('');
 
     try {
-      const response = await fetch('/api/auth/google/signup', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/google/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +146,7 @@ const EnhancedSignup = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/verify-signup-code', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-signup-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
