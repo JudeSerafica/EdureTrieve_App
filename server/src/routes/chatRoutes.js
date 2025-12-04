@@ -1,16 +1,14 @@
 import express from 'express';
 const router = express.Router();
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { saveChatEntry, getChatHistory, deleteChatEntriesByConversationId } from '../model/userModel.js';
 import { extractFromImage, extractTextFromFile } from '../utils/textExtractor.js';
 import authenticateToken from '../middleware/authMiddleware.js';
 import { generateContent } from '../model/Model.js';
 
-// Configure multer for file uploads (images and documents)
+// Configure multer for file uploads (images and documents) - MEMORY STORAGE for serverless
 const chatFileUpload = multer({
-  dest: 'uploads/chat-files/',
+  storage: multer.memoryStorage(), // Use memory storage instead of disk
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
       'image/jpeg', 'image/png', 'image/gif', 'image/webp',
@@ -100,23 +98,21 @@ router.post('/process-file', chatFileUpload.single('file'), async (req, res) => 
     console.log('Processing chat file:', {
       userId,
       conversationId,
-      filename: file.filename,
       originalName: file.originalname,
       size: file.size,
       mimetype: file.mimetype
     });
 
-    // Extract text from the uploaded file
-    const filePath = path.join(process.cwd(), 'uploads/chat-files', file.filename);
+    // Extract text from the uploaded file (using buffer from memory storage)
     let extractedText = '';
     const isImage = file.mimetype.startsWith('image/');
 
     try {
       if (isImage) {
-        extractedText = await extractFromImage(filePath);
+        extractedText = await extractFromImage(file.buffer);
         console.log('Image OCR extraction successful, text length:', extractedText.length);
       } else {
-        extractedText = await extractTextFromFile(filePath, file.mimetype);
+        extractedText = await extractTextFromFile(file.buffer, file.mimetype);
         console.log('Document text extraction successful, text length:', extractedText.length);
       }
     } catch (extractionError) {
@@ -125,12 +121,7 @@ router.post('/process-file', chatFileUpload.single('file'), async (req, res) => 
       extractedText = `[${isImage ? 'Image' : 'File'} uploaded - text extraction failed]`;
     }
 
-    // Clean up the uploaded file
-    try {
-      fs.unlinkSync(filePath);
-    } catch (cleanupError) {
-      console.warn('Failed to clean up uploaded file:', cleanupError);
-    }
+    // No cleanup needed since we're using memory storage
 
     // Generate AI response based on user's question + extracted text
     const fileType = isImage ? 'image' : 'file';

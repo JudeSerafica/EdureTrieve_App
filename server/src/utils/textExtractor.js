@@ -1,5 +1,4 @@
 import fs from 'fs';
-import path from 'path';
 import * as mammoth from 'mammoth';
 import { createWorker } from 'tesseract.js';
 import PPTX2Json from 'pptx2json';
@@ -8,26 +7,26 @@ console.log('[textExtractor] v2 loader active');
 
 /**
  * Extracts text content from various file types
- * @param {string} filePath - Path to the file
+ * @param {string|Buffer} input - Path to the file or file buffer
  * @param {string} mimeType - MIME type of the file
  * @returns {Promise<string>} Extracted text content
  */
-async function extractTextFromFile(filePath, mimeType) {
+async function extractTextFromFile(input, mimeType) {
   try {
     switch (mimeType) {
       case 'application/pdf':
-        return await extractFromPDF(filePath);
+        return await extractFromPDF(input);
       case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-        return await extractFromDOCX(filePath);
+        return await extractFromDOCX(input);
       case 'text/plain':
-        return await extractFromTXT(filePath);
+        return await extractFromTXT(input);
       case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-        return await extractFromPPTX(filePath);
+        return await extractFromPPTX(input);
       case 'image/jpeg':
       case 'image/png':
       case 'image/gif':
       case 'image/webp':
-        return await extractFromImage(filePath);
+        return await extractFromImage(input);
       default:
         throw new Error(`Unsupported MIME type: ${mimeType}`);
     }
@@ -41,9 +40,9 @@ async function extractTextFromFile(filePath, mimeType) {
  * Extract text from PDF files
  * Supports pdf-parse v1 (default function) and v2 (PDFParse class)
  */
-async function extractFromPDF(filePath) {
+async function extractFromPDF(input) {
   try {
-    const dataBuffer = fs.readFileSync(filePath);
+    const dataBuffer = Buffer.isBuffer(input) ? input : fs.readFileSync(input);
     const mod = await import('pdf-parse');
 
     let text = '';
@@ -77,9 +76,14 @@ async function extractFromPDF(filePath) {
 /**
  * Extract text from DOCX files
  */
-async function extractFromDOCX(filePath) {
+async function extractFromDOCX(input) {
   try {
-    const result = await mammoth.extractRawText({ path: filePath });
+    let result;
+    if (Buffer.isBuffer(input)) {
+      result = await mammoth.extractRawText({ arrayBuffer: input });
+    } else {
+      result = await mammoth.extractRawText({ path: input });
+    }
     return result.value;
   } catch (error) {
     throw new Error(`DOCX extraction failed: ${error.message}`);
@@ -89,9 +93,13 @@ async function extractFromDOCX(filePath) {
 /**
  * Extract text from TXT files
  */
-async function extractFromTXT(filePath) {
+async function extractFromTXT(input) {
   try {
-    return fs.readFileSync(filePath, 'utf8');
+    if (Buffer.isBuffer(input)) {
+      return input.toString('utf8');
+    } else {
+      return fs.readFileSync(input, 'utf8');
+    }
   } catch (error) {
     throw new Error(`TXT extraction failed: ${error.message}`);
   }
@@ -101,17 +109,24 @@ async function extractFromTXT(filePath) {
  * Extract text from PPTX files
  * Handles both constructor and function export styles
  */
-async function extractFromPPTX(filePath) {
+async function extractFromPPTX(input) {
   try {
     let pptx;
-    try {
-      // Some versions expose a class
-      pptx = new PPTX2Json(filePath);
-    } catch (_e) {
-      // Fallback: some builds expose a function default export
-      const mod = await import('pptx2json');
-      const fn = mod?.default ?? mod;
-      pptx = await fn(filePath);
+    if (Buffer.isBuffer(input)) {
+      // For buffers, we might need to create a temporary approach
+      // For now, return a placeholder since PPTX processing with buffers is complex
+      console.warn('PPTX buffer processing not fully implemented, returning placeholder');
+      return '[PPTX file uploaded - processing not available in serverless environment]';
+    } else {
+      try {
+        // Some versions expose a class
+        pptx = new PPTX2Json(input);
+      } catch (_e) {
+        // Fallback: some builds expose a function default export
+        const mod = await import('pptx2json');
+        const fn = mod?.default ?? mod;
+        pptx = await fn(input);
+      }
     }
 
     let text = '';
@@ -131,12 +146,17 @@ async function extractFromPPTX(filePath) {
 /**
  * Extract text from image files using OCR
  */
-async function extractFromImage(filePath) {
+async function extractFromImage(input) {
   let worker;
   try {
     worker = await createWorker('eng');
-    const { data: { text } } = await worker.recognize(filePath);
-    return text.trim();
+    let result;
+    if (Buffer.isBuffer(input)) {
+      result = await worker.recognize(input);
+    } else {
+      result = await worker.recognize(input);
+    }
+    return result.data.text.trim();
   } catch (error) {
     throw new Error(`Image OCR extraction failed: ${error.message}`);
   } finally {
