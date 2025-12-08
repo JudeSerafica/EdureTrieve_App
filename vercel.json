@@ -19,10 +19,6 @@
       "dest": "/server/src/index.js"
     },
     {
-      "src": "/auth/callback",
-      "dest": "/index.html"
-    },
-    {
       "src": "/((?!api/).*)",
       "dest": "/index.html"
     }

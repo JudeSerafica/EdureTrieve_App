@@ -263,6 +263,15 @@ app.post('/api/auth/google/signup', async (req, res) => {
   }
 });
 
+app.get('/auth/callback', (req, res) => {
+    // Kukunin ang CLIENT_URL mula sa Environment Variables.
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+
+    // I-redirect ang user pabalik sa Client, dala-dala ang lahat ng query parameters (code, state)
+    // Ang React Router na ang bahala sa pag-extract ng mga ito.
+    // req.url ay naglalaman ng path at query (e.g., /auth/callback?code=xxx&state=yyy)
+    res.redirect(`${clientUrl}${req.url}`);
+});
 
 app.post('/api/auth/google/callback', async (req, res) => {
   if (!googleClient) {
