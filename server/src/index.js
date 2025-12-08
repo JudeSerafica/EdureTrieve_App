@@ -1567,4 +1567,11 @@ app.get('/', (req, res) => {
   });
 });
 
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 EduRetrieve server running on port ${PORT}`);
+  console.log(`📍 Local development URL: http://localhost:${PORT}`);
+  console.log(`🔗 Client proxy configured for: http://localhost:5000`);
+});
+
 export default app;
