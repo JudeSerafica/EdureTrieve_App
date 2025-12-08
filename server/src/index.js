@@ -243,6 +243,9 @@ app.post('/api/auth/google/signup', async (req, res) => {
   }
 
   try {
+    console.log('Vercel URL:', process.env.VERCEL_URL);
+    console.log('Redirect URI for OAuth:', process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/auth/callback` : 'http://localhost:3000/auth/callback');
+
     const authUrl = googleClient.generateAuthUrl({
       access_type: 'offline',
       scope: [
@@ -309,9 +312,12 @@ app.post('/api/auth/google/callback', async (req, res) => {
 
     let tokens;
     try {
+      const redirectUri = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/auth/callback` : 'http://localhost:3000/auth/callback';
+      console.log('Using redirect_uri for token exchange:', redirectUri);
+
       const tokenResponse = await googleClient.getToken({
         code,
-        redirect_uri: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/auth/callback` : 'http://localhost:3000/auth/callback'
+        redirect_uri: redirectUri
       });
       tokens = tokenResponse.tokens;
     } catch (tokenError) {
