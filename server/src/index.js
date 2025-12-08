@@ -258,6 +258,87 @@ app.post('/api/auth/google/signup', async (req, res) => {
   }
 });
 
+app.get('/auth/callback', async (req, res) => {
+  // Handle GET request to /auth/callback (for direct browser access)
+  // Extract code and state from query parameters
+  const { code, state } = req.query;
+
+  if (!code || !state) {
+    return res.status(400).send(`
+      <html>
+        <body>
+          <h1>Authentication Error</h1>
+          <p>Missing authorization code or state parameter.</p>
+          <a href="/">Go back to home</a>
+        </body>
+      </html>
+    `);
+  }
+
+  try {
+    // Parse state
+    let parsedState;
+    try {
+      parsedState = JSON.parse(state);
+    } catch (parseError) {
+      return res.status(400).send(`
+        <html>
+          <body>
+            <h1>Authentication Error</h1>
+            <p>Invalid state parameter.</p>
+            <a href="/">Go back to home</a>
+          </body>
+        </html>
+      `);
+    }
+
+    const { email: originalEmail, action } = parsedState;
+
+    if (!originalEmail) {
+      return res.status(400).send(`
+        <html>
+          <body>
+            <h1>Authentication Error</h1>
+            <p>Invalid state: missing email.</p>
+            <a href="/">Go back to home</a>
+          </body>
+        </html>
+      `);
+    }
+
+    // Return HTML page that sets sessionStorage and redirects
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Processing Authentication...</title>
+          <script>
+            sessionStorage.setItem('auth_email', '${originalEmail.replace(/'/g, "\\'")}');
+            sessionStorage.setItem('auth_name', '${googleUserInfo.name.replace(/'/g, "\\'")}');
+            sessionStorage.setItem('google_verified', 'true');
+            window.location.href = '/signup?verified=true';
+          </script>
+        </head>
+        <body>
+          <p>Processing Google authentication...</p>
+        </body>
+      </html>
+    `;
+    res.send(html);
+
+  } catch (error) {
+    res.status(500).send(`
+      <html>
+        <body>
+          <h1>Authentication Error</h1>
+          <p>An error occurred during authentication.</p>
+          <a href="/">Go back to home</a>
+        </body>
+      </html>
+    `);
+  }
+});
+
 app.post('/api/auth/google/callback', async (req, res) => {
   if (!googleClient) {
     return res.status(500).json({ error: 'Google OAuth service not initialized' });

@@ -148,7 +148,7 @@ function HomePageContent() {
 
         <div style={scrollIndicatorStyle}>↓</div>
 
-        <Link to="/signup" style={ctaButtonStyle}>
+        <Link to="/login" style={ctaButtonStyle}>
           Get started
           <span style={arrowStyle}>→</span>
         </Link>

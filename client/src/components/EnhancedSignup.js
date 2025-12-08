@@ -20,17 +20,52 @@ const EnhancedSignup = () => {
     const checkVerificationStatus = async () => {
       const verified = searchParams.get('verified');
       const error = searchParams.get('error');
-      
+      const code = searchParams.get('code');
+      const state = searchParams.get('state');
+      const emailParam = searchParams.get('email');
+
       if (error) {
         setError(decodeURIComponent(error));
         setStep('email');
         return;
       }
-      
+
+      // Handle direct OAuth callback parameters
+      if (code && state && emailParam) {
+        try {
+          // Process the OAuth callback directly
+          const response = await fetch(`${API_BASE_URL}/api/auth/google/callback`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, state }),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.error || 'Authentication failed');
+          }
+
+          // Store the data for the verification step
+          sessionStorage.setItem('auth_email', result.email);
+          sessionStorage.setItem('auth_name', result.name);
+          sessionStorage.setItem('google_verified', 'true');
+
+          // Redirect to signup with verified=true to trigger the normal flow
+          navigate('/signup?verified=true', { replace: true });
+          return;
+        } catch (err) {
+          console.error('OAuth callback error:', err);
+          setError(err.message);
+          setStep('email');
+          return;
+        }
+      }
+
       if (verified === 'true') {
         const storedEmail = sessionStorage.getItem('auth_email');
         const storedName = sessionStorage.getItem('auth_name');
-        
+
         if (storedEmail && storedName) {
           setEmail(storedEmail);
           setUserInfo({
@@ -40,14 +75,14 @@ const EnhancedSignup = () => {
           });
           setStep('verification');
           setMessage('Google verification successful! Please enter the verification code sent to your email.');
-          
+
           try {
             const response = await fetch(`${API_BASE_URL}/api/auth/check-verification-status`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email: storedEmail }),
             });
-            
+
             if (response.ok) {
               const result = await response.json();
               if (result.hasVerification && result.timeRemaining > 0) {
@@ -57,7 +92,7 @@ const EnhancedSignup = () => {
           } catch (err) {
             console.warn('Could not check verification status:', err);
           }
-          
+
           sessionStorage.removeItem('auth_email');
           sessionStorage.removeItem('auth_name');
           sessionStorage.removeItem('google_verified');
@@ -66,7 +101,7 @@ const EnhancedSignup = () => {
     };
 
     checkVerificationStatus();
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     let timer;
