@@ -267,9 +267,9 @@ app.post('/api/auth/google/signup', async (req, res) => {
 });
 
 
-app.get('/api/auth/google/callback', async (req, res) => {
-  console.log('Google callback GET received:', {
-    query: req.query,
+app.post('/api/auth/google/callback', async (req, res) => {
+  console.log('Google callback POST received:', {
+    body: req.body,
     headers: req.headers
   });
 
@@ -277,7 +277,7 @@ app.get('/api/auth/google/callback', async (req, res) => {
     return res.status(500).json({ error: 'Google OAuth service not initialized' });
   }
 
-  const { code, state } = req.query;
+  const { code, state } = req.body;
 
   if (!code || !state) {
     return res.status(400).json({
@@ -1553,7 +1553,7 @@ app.get('/', (req, res) => {
     status: 'Column name mismatches resolved - fullName->fullname, pfpUrl->pfpurl',
     endpoints: [
       'POST /api/auth/google/signup - Initiate Google OAuth signup',
-      'POST /api/auth/google/callback - Handle Google OAuth callback',
+      'GET /api/auth/google/callback - Handle Google OAuth callback',
       'POST /api/auth/verify-signup-code - Complete signup with verification code',
       'POST /api/auth/check-verification-status - Check verification status',
       'POST /api/auth/check-user-status - Check user status',
