@@ -3,7 +3,13 @@
   "builds": [
     {
       "src": "client/package.json",
-      "use": "@vercel/static-build"
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "../build"
+      },
+      "env": {
+        "BUILD_PATH": "../build"
+      }
     },
     {
       "src": "server/src/index.js",
