@@ -267,16 +267,29 @@ app.post('/api/auth/google/signup', async (req, res) => {
 });
 
 app.get('/auth/callback', (req, res) => {
-    // Kukunin ang CLIENT_URL mula sa Environment Variables.
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    console.log('OAuth callback received:', {
+        url: req.url,
+        query: req.query,
+        headers: req.headers
+    });
 
-    // I-redirect ang user pabalik sa Client, dala-dala ang lahat ng query parameters (code, state)
-    // Ang React Router na ang bahala sa pag-extract ng mga ito.
-    // req.url ay naglalaman ng path at query (e.g., /auth/callback?code=xxx&state=yyy)
+    // Get the client URL from environment variables or default to localhost
+    const clientUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+
+    console.log('Redirecting to client URL:', clientUrl + req.url);
+
+    // Redirect the user back to the client, carrying all query parameters (code, state)
+    // React Router will handle extracting them.
+    // req.url contains the path and query (e.g., /auth/callback?code=xxx&state=yyy)
     res.redirect(`${clientUrl}${req.url}`);
 });
 
 app.post('/api/auth/google/callback', async (req, res) => {
+  console.log('Google callback POST received:', {
+    body: req.body,
+    headers: req.headers
+  });
+
   if (!googleClient) {
     return res.status(500).json({ error: 'Google OAuth service not initialized' });
   }
