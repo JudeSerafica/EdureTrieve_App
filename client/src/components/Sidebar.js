@@ -124,4 +124,3 @@ function Sidebar({ onLogout, user }) {
 }
 
 export default Sidebar;
-
