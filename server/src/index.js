@@ -33,7 +33,7 @@ try {
   googleClient = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-   'http://localhost:3000/auth/callback'
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/auth/callback` : 'http://localhost:3000/auth/callback'
   );
 } catch (error) {
   console.warn('Failed to initialize Google OAuth client:', error.message);
@@ -267,9 +267,9 @@ app.post('/api/auth/google/signup', async (req, res) => {
 });
 
 
-app.post('/api/auth/google/callback', async (req, res) => {
-  console.log('Google callback POST received:', {
-    body: req.body,
+app.get('/api/auth/google/callback', async (req, res) => {
+  console.log('Google callback GET received:', {
+    query: req.query,
     headers: req.headers
   });
 
@@ -277,7 +277,7 @@ app.post('/api/auth/google/callback', async (req, res) => {
     return res.status(500).json({ error: 'Google OAuth service not initialized' });
   }
 
-  const { code, state } = req.body;
+  const { code, state } = req.query;
 
   if (!code || !state) {
     return res.status(400).json({
