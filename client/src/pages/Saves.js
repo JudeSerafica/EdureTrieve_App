@@ -187,11 +187,18 @@ function Saves() {
 
         const moduleItems = data.filter(item => item.modules); 
         const userIds = [...new Set(moduleItems.map(item => item.modules.user_id))];
-        
-        const { data: profilesData } = await supabase
+
+        console.log('🔍 Fetching profiles for userIds:', userIds);
+        const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, username, fullName')
           .in('id', userIds);
+
+        if (profilesError) {
+          console.error('❌ Profiles query error:', profilesError);
+        } else {
+          console.log('✅ Profiles data:', profilesData);
+        }
 
         const profilesMap = new Map();
         profilesData?.forEach(profile => {

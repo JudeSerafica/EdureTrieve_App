@@ -33,7 +33,7 @@ try {
   googleClient = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/auth/callback` : 'http://localhost:3000/auth/callback'
+   'http://localhost:3000/auth/callback'
   );
 } catch (error) {
   console.warn('Failed to initialize Google OAuth client:', error.message);
